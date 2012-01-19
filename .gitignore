@@ -1,0 +1,7 @@
+bin/
+.settings/
+.project
+*.class
+.DS_Store?
+*.log
+target
