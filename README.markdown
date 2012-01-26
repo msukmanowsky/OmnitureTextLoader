@@ -1,7 +1,9 @@
 # OmnitureTextLoader
 
 ## what is it
-A Pig UDF (custom Loader) which allows the reading and parsing of raw Omniture data files (hit_data.tsv).
+An Apache Pig UDF (custom Loader) which allows the reading and parsing of raw Omniture data files (hit_data.tsv).
+
+Looking to perform analysis with Hive instead of Pig? You can simply use the underlying InputFormat directly see [OmnitureDataFileInputFormat](https://github.com/msukmanowsky/OmnitureDataFileInputFormat).
 
 ## usage in pig
 To use `OmnitureTextLoader` in a Pig script, you will first have to register both the [InputFormat](https://github.com/msukmanowsky/OmnitureDataFileInputFormat) well as the UDF.
@@ -37,4 +39,3 @@ Here's a small sample script to count the number of hits (not necessarily page v
       ORDER counted BY total DESC;
     
     STORE ordered INTO 'output';
-      
