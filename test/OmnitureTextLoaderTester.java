@@ -1,6 +1,7 @@
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.Iterator;
 
 import org.junit.*;
 import static org.junit.Assert.*;
@@ -9,6 +10,7 @@ import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.RecordReader;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
+import org.apache.pig.data.DataBag;
 import org.apache.pig.data.Tuple;
 import org.apache.pig.pigunit.PigTest;
 import org.apache.pig.tools.parameters.ParseException;
@@ -22,9 +24,11 @@ public class OmnitureTextLoaderTester {
 	private OmnitureTextLoader loader;
 	
 	@Before
-	public void setUp() throws FileNotFoundException {
+	public void setUp() throws IOException {
 		// TODO: Should test with an escaped new line/tab file as well as a non-escaped file - or just have the first and second rows with one escaped and one non-escaped
 		reader = new MockRecordReader("test/hit_data.tsv");
+		loader = new OmnitureTextLoader();
+		loader.prepareToRead(reader, null);
 	}
 	
 	@Test
@@ -40,22 +44,23 @@ public class OmnitureTextLoaderTester {
 		
 		// TODO: This is not the correct output for hit_data.tsv, it is for input above
 		String[] output = {
-			"616595,2",
-			"675463,1"
+			"72239,24",
+			"482184,11",
+			"713877,10",
+			"544423,7",
+			"240249,6"
 		};
 		
-		test.assertOutput("data", input, "ids_ordered", output);
+		test.assertOutput("data", input, "output", output);
 	}
 	
 	@Test
 	public void testAllFields() throws Exception {
-		loader = new OmnitureTextLoader();
-		loader.prepareToRead(reader, null);
 		Tuple tuple = loader.getNext();
 		
 		// Check that the tuple is structurally correct first
 		assertNotNull(tuple);
-		assertEquals(tuple.size(), OmnitureTextLoader.FIELDS.size());
+		assertEquals(tuple.size(), 226);
 		
 		// Now we'll check that the tuple contains some of the right values
 		String language = (String)tuple.get(2);
@@ -66,41 +71,21 @@ public class OmnitureTextLoaderTester {
 	}
 	
 	@Test
-	public void testFieldsByName() throws Exception {
-		loader = new OmnitureTextLoader("hit_time_gmt", "visid_high", "visid_low", "geo_city", "geo_country", "geo_region");
-		loader.prepareToRead(reader, null);
+	public void testEventListBag() throws Exception {
+		// Skip the first row
+		loader.getNext();
+		Tuple t = loader.getNext();
 		
-		Tuple tuple = loader.getNext();
+		assertNotNull(t);
+		assertEquals(t.size(), 226);
 		
-		// Check that tuple is structurally correct first
-		assertNotNull(tuple);
-		assertEquals(tuple.size(), 6);
-		
-		// Now check values
-		String geoCity = (String)tuple.get(3);
-		String geoCountry = (String)tuple.get(4);
-		
-		assertEquals(geoCity, "cambridge");
-		assertEquals(geoCountry, "usa");
+		DataBag event_list = (DataBag)t.get(6);
+		Iterator<Tuple> it = event_list.iterator();
+		Tuple temp = it.next();
+		assertEquals(temp.get(0).toString(), "12");
+		temp = it.next();
+		assertEquals(temp.get(0).toString(), "10");
 	}
-	
-	@Test
-	public void testFieldsByIndex() throws Exception {
-		loader = new OmnitureTextLoader(0, 2, 24, 28, 50);
-		loader.prepareToRead(reader, null);
-		
-		Tuple tuple = loader.getNext();
-		
-		assertNotNull(tuple);
-		assertEquals(tuple.size(), 5);
-		
-		String hitTime = (String)tuple.get(0);
-		String language = (String)tuple.get(1);
-		
-		assertEquals(hitTime, "1130770920");
-		assertEquals(language, "en-ca");
-	}
-	
 		
 	public class MockRecordReader extends RecordReader {
 		private EscapedLineReader lineReader;

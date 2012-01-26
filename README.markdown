@@ -1,27 +1,40 @@
 # OmnitureTextLoader
 
 ## what is it
-A Pig UDF which allows the reading and parsing of raw Omniture data files (hit_data.tsv).
+A Pig UDF (custom Loader) which allows the reading and parsing of raw Omniture data files (hit_data.tsv).
 
 ## usage in pig
 To use `OmnitureTextLoader` in a Pig script, you will first have to register both the [InputFormat](https://github.com/msukmanowsky/OmnitureDataFileInputFormat) well as the UDF.
 
-    REGISTER path/to/jar/OmnitureDataInputFileFormat.jar
-    REGISTER path/to/jar/OmnitureTextLoader.jar
+    REGISTER 'path/to/jar/OmnitureDataInputFileFormat.jar';
+    REGISTER 'path/to/jar/OmnitureTextLoader.jar';
 
-From here, there are three ways to interface with the UDF when loading Omniture data.
+Once the JARs are registered, you're able to use the custom loader:
 
-### Read in all 226 fields per tuple
-In this case you'll have to specify the field definitions for all 226 fields.  I'll update this readme soon to include this reference so it isn't so labourious (you could also e-mail me if you'd like :)).
-
-    A = LOAD '/path/to/data/hit_data.tsv' USING com.tgam.hadoop.pig.OmnitureTextLoader() AS (hit_time_gmt:long, service:chararray, ...)
+    A = LOAD '/path/to/data/hit_data.tsv' USING com.tgam.hadoop.pig.OmnitureTextLoader();
     
-### Select fields by name
-You can select fields by the field name specified in Omniture's documentation.
+Notice that you do not have to specify a schema for the file because `OmnitureTextLoader` already understands the schema of hit_data.tsv files (this is taken care of via it's implementation of `LoadMetadata` - thank you for the heads up [Dmitriy Ryaboy](https://twitter.com/#!/squarecog)!).  You'll have to refer to Omniture's documentation as to specific field names (see ClickStreamData.pdf).
 
-    A = LOAD '/path/to/data/hit_data.tsv' USING com.tgam.hadoop.pig.OmnitureTextLoader('hit_time_gmt', 'visid_high', 'visid_low', 'geo_city') AS (hit_time_gmt:long, visid_high:chararray, visid_low:chararray, city:chararray)
+Here's a small sample script to count the number of hits (not necessarily page views) by visitor:
+
+    REGISTER 'path/to/jar/OmnitureDataInputFileFormat.jar';
+    REGISTER 'path/to/jar/OmnitureTextLoader.jar';
+
+    data = LOAD 'hit_data.tsv' USING com.tgam.hadoop.pig.OmnitureTextLoader();
     
-### Select fields by index
-If you'd prefer to select fields by the index number you know is assigned to them, you can also do that.
-
-    A = LOAD '/path/to/data/hit_data.tsv' USING com.tgam.hadoop.pig.OmnitureTextLoader(0, 12, 44, 22) AS (hit_time_gmt:long, ...)
+    correct_id = 
+      FOREACH data
+      GENERATE CONCAT(visid_low, visid_high) AS visid;
+    
+    grouped = 
+      GROUP correct_id BY visid;
+    
+    counted = 
+      FOREACH grouped
+      GENERATE group AS visid, COUNT(correct_id) AS total;
+    
+    ordered = 
+      ORDER counted BY total DESC;
+    
+    STORE ordered INTO 'output';
+      

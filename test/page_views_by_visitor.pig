@@ -1,8 +1,7 @@
 data = 
 	LOAD 'test/hit_data.tsv' 
-	USING com.tgam.hadoop.pig.OmnitureTextLoader('visid_high', 'visid_low')
-	AS (visid_high:chararray, visid_low:chararray);
-	
+	USING com.tgam.hadoop.pig.OmnitureTextLoader();
+
 correct_id = 
 	FOREACH data
 	GENERATE CONCAT(visid_low, visid_high) AS visid;
@@ -15,14 +14,13 @@ counted =
 	FOREACH grouped
 	GENERATE
 		group AS visid,
-		COUNT(data) AS total;
+		COUNT(correct_id) AS total;
 
 ordered = 
 	ORDER counted
 	BY total DESC;
 
-limited =
-	LIMIT ordered 2;
+limited = 
+	LIMIT ordered 5;
 
-DUMP limited;
 STORE limited INTO 'output';
