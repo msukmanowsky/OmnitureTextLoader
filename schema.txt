@@ -1,4 +1,4 @@
-hit_time_gmt:int,
+hit_time_gmt:long,
 service:chararray,
 accept_language:chararray,
 date_time:chararray,
