@@ -87,6 +87,7 @@ public class OmnitureTextLoaderTester {
 		assertEquals(temp.get(0).toString(), "10");
 	}
 		
+	@SuppressWarnings("rawtypes")
 	public class MockRecordReader extends RecordReader {
 		private EscapedLineReader lineReader;
 		private long key;
