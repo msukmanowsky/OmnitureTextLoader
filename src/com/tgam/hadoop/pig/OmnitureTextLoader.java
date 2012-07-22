@@ -23,6 +23,7 @@ import org.apache.pig.data.Tuple;
 import org.apache.pig.data.TupleFactory;
 import org.apache.pig.impl.util.UDFContext;
 import org.apache.pig.impl.util.Utils;
+import org.apache.pig.impl.logicalLayer.parser.ParseException;
 
 import com.tgam.hadoop.mapreduce.OmnitureDataFileInputFormat;
 import com.tgam.hadoop.mapreduce.OmnitureDataFileRecordReader;
@@ -76,8 +77,12 @@ public class OmnitureTextLoader extends LoadFunc implements LoadMetadata {
 			throws IOException {
 		// LOG.info("RecordReader is of type " + reader.getClass().getName());
 		this.reader = (OmnitureDataFileRecordReader)reader;
-		ResourceSchema schema = new ResourceSchema(Utils.getSchemaFromString(STRING_SCHEMA));
-		fields = schema.getFields();
+		try {
+			ResourceSchema schema = new ResourceSchema(Utils.getSchemaFromString(STRING_SCHEMA));
+			fields = schema.getFields();
+		} catch (ParseException pe) {
+			throw new IOException(pe);
+		}
 	}
 	
 	@Override
@@ -159,15 +164,18 @@ public class OmnitureTextLoader extends LoadFunc implements LoadMetadata {
 	@Override
 	public ResourceSchema getSchema(String location, Job job) throws IOException {
 		// The schema for hit_data.tsv won't change for quite sometime and when it does, this class should be updated
+		try {
+			ResourceSchema s = new ResourceSchema(Utils.getSchemaFromString(STRING_SCHEMA));
 		
-		ResourceSchema s = new ResourceSchema(Utils.getSchemaFromString(STRING_SCHEMA));
+			// Store the schema to our UDF context on the backend (is this really necessary considering it's private static final?)
+			UDFContext udfc = UDFContext.getUDFContext();
+			Properties p = udfc.getUDFProperties(this.getClass(), new String[]{udfcSignature});
+			p.setProperty("pig.omnituretextloader.schema", STRING_SCHEMA);
 		
-		// Store the schema to our UDF context on the backend (is this really necessary considering it's private static final?)
-		UDFContext udfc = UDFContext.getUDFContext();
-		Properties p = udfc.getUDFProperties(this.getClass(), new String[]{udfcSignature});
-		p.setProperty("pig.omnituretextloader.schema", STRING_SCHEMA);
-		
-		return s;
+			return s;
+		} catch (ParseException pe) {
+			throw new IOException(pe);
+		}
 	}
 	
 	@Override
